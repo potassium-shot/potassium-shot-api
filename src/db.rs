@@ -1,14 +1,12 @@
-use std::time::Duration;
-
 use chrono::{DateTime, Utc};
+use tracing::info;
 
 use crate::{
     prelude::*,
-    types::{LoginToken, LoginTokenError, UserId},
+    types::{LoginToken, UserId},
 };
 
-const FIXED_TIMESTAMP_DELAY: Duration = Duration::from_millis(500);
-
+#[derive(Clone)]
 pub struct Db {
     conn: sqlx::SqlitePool,
 }
@@ -20,11 +18,12 @@ impl Db {
 
         let conn = sqlx::SqlitePool::connect(&format!("sqlite:{}:rwc", path)).await?;
         sqlx::migrate!().run(&conn).await?;
+        info!("Database loaded.");
         Ok(Self { conn })
     }
 
-    pub async fn add_user(&self, name: &str, password_hash: &str) -> Result<()> {
-        sqlx::query(
+    pub async fn add_user(&self, name: &str, password_hash: &str) -> Result<UserId> {
+        let id = sqlx::query(
             r#"
             INSERT INTO users (name, password_hash) VALUES (?, ?);
             "#,
@@ -32,9 +31,38 @@ impl Db {
         .bind(name)
         .bind(password_hash)
         .execute(&self.conn)
+        .await?
+        .last_insert_rowid();
+
+        info!("User '{}' (id: {}) added.", name, id);
+
+        Ok(UserId(id))
+    }
+
+    pub async fn get_user_name(&self, userid: UserId) -> Result<String> {
+        let (name,): (String,) = sqlx::query_as(
+            r#"
+            SELECT name FROM user WHERE id = ?;
+            "#,
+        )
+        .bind(*userid)
+        .fetch_one(&self.conn)
         .await?;
 
-        Ok(())
+        Ok(name)
+    }
+
+    pub async fn get_user_by_name(&self, name: &str) -> Result<UserId> {
+        let (id,): (i64,) = sqlx::query_as(
+            r#"
+            SELECT id FROM users WHERE name = ?;
+            "#,
+        )
+        .bind(name)
+        .fetch_one(&self.conn)
+        .await?;
+
+        Ok(UserId(id))
     }
 
     pub async fn get_user_password_hash(&self, userid: UserId) -> Result<String> {
@@ -60,6 +88,12 @@ impl Db {
         .execute(&self.conn)
         .await?;
 
+        info!(
+            "User '{}' (id: {}) removed.",
+            self.get_user_name(userid).await?,
+            userid
+        );
+
         Ok(())
     }
 
@@ -71,41 +105,35 @@ impl Db {
     ) -> Result<()> {
         sqlx::query(
             r#"
-            INSERT INTO login_tokens (user, token, expiration) VALUES (?, ?, ?);
+            INSERT OR REPLACE INTO login_tokens (user, token, expiration) VALUES (?, ?, ?);
             "#,
         )
         .bind(*userid)
-        .bind((*token).as_str())
+        .bind((*token).as_slice())
         .bind(expiration)
         .execute(&self.conn)
         .await?;
 
+        info!(
+            "Login token added for user '{}' (id: {}).",
+            self.get_user_name(userid).await?,
+            userid
+        );
+
         Ok(())
     }
 
-    pub async fn user_hash_token(&self, userid: UserId, token: LoginToken) -> Result<bool> {
-        let fixed_timestamp_end = tokio::time::Instant::now() + FIXED_TIMESTAMP_DELAY;
-
-        let tokens: Vec<(String,)> = sqlx::query_as(
+    pub async fn get_user_by_token(&self, token: LoginToken) -> Result<UserId> {
+        let (userid,): (i64,) = sqlx::query_as(
             r#"
-            SELECT token FROM login_tokens WHERE userid = ? AND expiration < strftime('%s','now');
+            SELECT user FROM login_tokens WHERE token = ?;
             "#,
         )
-        .bind(*userid)
-        .fetch_all(&self.conn)
+        .bind((*token).as_slice())
+        .fetch_one(&self.conn)
         .await?;
 
-        if tokens
-            .into_iter()
-            .map(|(token,)| LoginToken::try_new(token))
-            .collect::<Result<Vec<_>, LoginTokenError>>()?
-            .contains(&token)
-        {
-            Ok(true)
-        } else {
-            tokio::time::sleep_until(fixed_timestamp_end).await;
-            Ok(false)
-        }
+        Ok(UserId(userid))
     }
 
     pub async fn cleanup(&self) -> Result<()> {
@@ -117,6 +145,8 @@ impl Db {
         )
         .execute(&self.conn)
         .await?;
+
+        info!("Database cleaned up.");
 
         Ok(())
     }

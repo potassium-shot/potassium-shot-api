@@ -1,1 +1,2 @@
 pub const DB_PATH: &str = "POTASSIUM_SHOT_API_DB_PATH";
+pub const LISTEN_ADDR: &str = "POTASSIUM_SHOT_API_LISTEN_ADDR";
