@@ -11,13 +11,18 @@ pub struct LoginArgs {
     remember: bool,
 }
 
+#[derive(serde::Serialize)]
+pub struct LoginResult {
+    token: LoginToken,
+}
+
 pub async fn login(
     Json(LoginArgs {
         username,
         password,
         remember,
     }): Json<LoginArgs>,
-) -> AxumResult<Json<LoginToken>> {
+) -> AxumResult<Json<LoginResult>> {
     let db = super::db();
     let userid = db.get_user_by_name(username.as_str()).await?;
     let password_hash = db.get_user_password_hash(userid).await?;
@@ -34,7 +39,7 @@ pub async fn login(
     db.add_login_token(userid, token, expiration).await?;
 
     if crate::pswd::password_verify(password.as_str(), password_hash.as_str()).await? {
-        Ok(Json(token))
+        Ok(Json(LoginResult { token }))
     } else {
         Err(anyhow!("Wrong password.").into())
     }

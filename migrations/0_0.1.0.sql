@@ -15,3 +15,13 @@ CREATE TABLE login_tokens (
         ON UPDATE CASCADE
         ON DELETE CASCADE
 );
+
+CREATE TABLE admins (
+    id INTEGER PRIMARY KEY,
+    user INTEGER UNIQUE NOT NULL,
+
+    FOREIGN KEY (user)
+        REFERENCES users (id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);

@@ -21,6 +21,15 @@ impl Db {
     }
 
     pub async fn add_user(&self, name: &str, password_hash: &str) -> Result<UserId> {
+        let first = sqlx::query_as::<_, (i64,)>(
+            r#"
+            SELECT id FROM users
+            "#,
+        )
+        .fetch_optional(&self.conn)
+        .await?
+        .is_none();
+
         let id = sqlx::query(
             r#"
             INSERT INTO users (name, password_hash) VALUES (?, ?);
@@ -33,6 +42,10 @@ impl Db {
         .last_insert_rowid();
 
         info!("User '{}' (id: {}) added.", name, id);
+
+        if first {
+            self.promote_user(UserId(id)).await?;
+        }
 
         Ok(UserId(id))
     }
@@ -130,6 +143,39 @@ impl Db {
         .await?;
 
         Ok(UserId(userid))
+    }
+
+    pub async fn promote_user(&self, userid: UserId) -> Result<()> {
+        sqlx::query(
+            r#"
+            INSERT INTO admins (user) VALUES (?);
+            "#,
+        )
+        .bind(*userid)
+        .execute(&self.conn)
+        .await?;
+
+        info!(
+            "User '{}' (id: {}) promoted to admin.",
+            self.get_user_name(userid).await?,
+            userid
+        );
+
+        Ok(())
+    }
+
+    pub async fn is_user_admin(&self, userid: UserId) -> Result<bool> {
+        let found = sqlx::query_as::<_, (i64,)>(
+            r#"
+            SELECT id FROM admins WHERE user = ?;
+            "#,
+        )
+        .bind(*userid)
+        .fetch_optional(&self.conn)
+        .await?
+        .is_some();
+
+        Ok(found)
     }
 
     pub async fn cleanup(&self) -> Result<()> {
