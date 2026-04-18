@@ -22,7 +22,11 @@ async fn main() -> Result<()> {
     let db = Db::new().await?;
     DB.get_or_init(|| db);
 
-    let addr = std::env::var(crate::env::LISTEN_ADDR).unwrap_or_else(|_| String::from("0.0.0.0"));
+    let addr = format!(
+        "{}:{}",
+        crate::env::LISTEN_ADDR.get(),
+        crate::env::LISTEN_PORT.get()
+    );
     let listener = tokio::net::TcpListener::bind(addr.as_str()).await?;
 
     let mut int = signal(SignalKind::interrupt())?;

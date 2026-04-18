@@ -13,10 +13,8 @@ pub struct Db {
 
 impl Db {
     pub async fn new() -> Result<Self> {
-        let path = std::env::var(crate::env::DB_PATH)
-            .unwrap_or_else(|_| "/usr/share/potassium-shot-api/db.sqlite".into());
-
-        let conn = sqlx::SqlitePool::connect(&format!("sqlite:{}:rwc", path)).await?;
+        let path = crate::env::DB_PATH.get();
+        let conn = sqlx::SqlitePool::connect(&format!("sqlite:{}?mode=rwc", path)).await?;
         sqlx::migrate!().run(&conn).await?;
         info!("Database loaded.");
         Ok(Self { conn })
@@ -42,7 +40,7 @@ impl Db {
     pub async fn get_user_name(&self, userid: UserId) -> Result<String> {
         let (name,): (String,) = sqlx::query_as(
             r#"
-            SELECT name FROM user WHERE id = ?;
+            SELECT name FROM users WHERE id = ?;
             "#,
         )
         .bind(*userid)
@@ -79,20 +77,18 @@ impl Db {
     }
 
     pub async fn remove_user(&self, userid: UserId) -> Result<()> {
+        let username = self.get_user_name(userid).await?;
+
         sqlx::query(
             r#"
-            DELETE FROM user WHERE id = ?;
+            DELETE FROM users WHERE id = ?;
             "#,
         )
         .bind(*userid)
         .execute(&self.conn)
         .await?;
 
-        info!(
-            "User '{}' (id: {}) removed.",
-            self.get_user_name(userid).await?,
-            userid
-        );
+        info!("User '{}' (id: {}) removed.", username, userid);
 
         Ok(())
     }
