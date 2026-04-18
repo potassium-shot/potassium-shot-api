@@ -7,7 +7,10 @@ edition = "2024"
 anyhow = "1.0.102"
 argon2 = { version = "0.5.3", features = ["std", "zeroize"] }
 axum = "0.8.9"
+chrono = "0.4.44"
+deref-derive = "0.1.0"
+nutype = "0.6.2"
 serde = { version = "1.0.228", features = ["derive"] }
-sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio"] }
+sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio", "chrono"] }
 tokio = { version = "1.52.0", features = ["full"] }
 zeroize = { version = "1.8.2", features = ["derive"] }
