@@ -14,6 +14,11 @@ pub struct Db {
 impl Db {
     pub async fn new() -> Result<Self> {
         let path = crate::env::DB_PATH.get();
+        std::fs::create_dir_all(
+            std::path::PathBuf::from(path.as_ref())
+                .parent()
+                .expect("DB path should point to a file."),
+        )?;
         let conn = sqlx::SqlitePool::connect(&format!("sqlite:{}?mode=rwc", path)).await?;
         sqlx::migrate!().run(&conn).await?;
         info!("Database loaded.");
