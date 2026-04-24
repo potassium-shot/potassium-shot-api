@@ -3,6 +3,6 @@ WORKDIR /usr/src/potassium-shot-api
 COPY . .
 RUN cargo build --release
 
-FROM alpine:3.23.4
+FROM debian:oldstable-20260316-slim
 COPY --from=builder /usr/src/potassium-shot-api/target/release/potassium-shot-api /usr/local/bin
 CMD [ "/usr/local/bin/potassium-shot-api" ]
