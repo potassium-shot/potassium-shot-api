@@ -1,18 +1,6 @@
 use axum::Json;
-use zeroize::Zeroizing;
 
 use crate::prelude::*;
-
-#[derive(serde::Deserialize, Debug)]
-pub struct CreateUserArgs {
-    username: String,
-    password: Zeroizing<String>,
-}
-
-#[derive(serde::Serialize)]
-pub struct CreateUserResult {
-    userid: UserId,
-}
 
 pub async fn create_user(
     Json(CreateUserArgs { username, password }): Json<CreateUserArgs>,

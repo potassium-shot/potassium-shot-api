@@ -1,10 +1,7 @@
 use chrono::{DateTime, Utc};
 use tracing::info;
 
-use crate::{
-    prelude::*,
-    types::{LoginToken, UserId},
-};
+use crate::prelude::*;
 
 #[derive(Clone)]
 pub struct Db {

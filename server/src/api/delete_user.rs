@@ -1,13 +1,6 @@
 use axum::Json;
-use zeroize::Zeroizing;
 
 use crate::prelude::*;
-
-#[derive(serde::Deserialize)]
-pub struct DeleteUserArgs {
-    token: LoginToken,
-    password: Zeroizing<String>,
-}
 
 pub async fn delete_user(
     Json(DeleteUserArgs { token, password }): Json<DeleteUserArgs>,

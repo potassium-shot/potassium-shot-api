@@ -2,12 +2,6 @@ use axum::Json;
 
 use crate::prelude::*;
 
-#[derive(serde::Deserialize)]
-pub struct PromoteUserArgs {
-    token: LoginToken,
-    user_to_promote: UserId,
-}
-
 pub async fn promote_user(
     Json(PromoteUserArgs {
         token,

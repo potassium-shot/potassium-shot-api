@@ -2,16 +2,6 @@ use axum::Json;
 
 use crate::prelude::*;
 
-#[derive(serde::Deserialize)]
-pub struct GetUserIdFromTokenArgs {
-    token: LoginToken,
-}
-
-#[derive(serde::Serialize)]
-pub struct GetUserIdFromTokenResult {
-    userid: UserId,
-}
-
 pub async fn get_userid_from_token(
     Json(GetUserIdFromTokenArgs { token }): Json<GetUserIdFromTokenArgs>,
 ) -> AxumResult<Json<GetUserIdFromTokenResult>> {

@@ -1,20 +1,7 @@
 use axum::Json;
 use chrono::Utc;
-use zeroize::Zeroizing;
 
 use crate::prelude::*;
-
-#[derive(serde::Deserialize)]
-pub struct LoginArgs {
-    username: String,
-    password: Zeroizing<String>,
-    remember: bool,
-}
-
-#[derive(serde::Serialize)]
-pub struct LoginResult {
-    token: LoginToken,
-}
 
 pub async fn login(
     Json(LoginArgs {

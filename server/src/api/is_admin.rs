@@ -2,16 +2,6 @@ use axum::Json;
 
 use crate::prelude::*;
 
-#[derive(serde::Deserialize)]
-pub struct IsAdminArgs {
-    userid: UserId,
-}
-
-#[derive(serde::Serialize)]
-pub struct IsAdminResult {
-    is_admin: bool,
-}
-
 pub async fn is_admin(
     Json(IsAdminArgs { userid }): Json<IsAdminArgs>,
 ) -> AxumResult<Json<IsAdminResult>> {

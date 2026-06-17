@@ -10,7 +10,6 @@ mod db;
 mod env;
 mod prelude;
 mod pswd;
-mod types;
 mod utils;
 
 static DB: OnceLock<Db> = OnceLock::new();

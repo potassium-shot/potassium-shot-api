@@ -1,0 +1,12 @@
+[package]
+name = "potassium-shot-client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+reqwest = { version = "0.13", features = ["json"] }
+serde.workspace = true
+zeroize.workspace = true
+
+[dependencies.potassium-shot-common]
+path = "../common"
