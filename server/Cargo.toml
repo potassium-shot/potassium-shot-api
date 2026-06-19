@@ -6,10 +6,11 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.102"
 argon2.workspace = true
-axum = "0.8.9"
+axum.workspace = true
 base64.workspace = true
 chrono = "0.4.44"
 deref-derive.workspace = true
+libloading = "0.9.0"
 serde.workspace = true
 sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio", "chrono"] }
 tokio = { version = "1.52.0", features = ["full"] }
@@ -19,3 +20,7 @@ zeroize.workspace = true
 
 [dependencies.potassium-shot-common]
 path = "../common"
+
+[dependencies.potassium-shot-plugin]
+path = "../plugin"
+features = ["server-impl"]

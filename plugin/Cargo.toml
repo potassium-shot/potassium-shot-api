@@ -1,0 +1,13 @@
+[package]
+name = "potassium-shot-plugin"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = []
+server-impl = []
+
+[dependencies]
+anyhow = "1.0.102"
+axum.workspace = true
+serde.workspace = true

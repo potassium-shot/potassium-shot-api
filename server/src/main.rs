@@ -8,6 +8,7 @@ mod api;
 mod constants;
 mod db;
 mod env;
+mod plugins;
 mod prelude;
 mod pswd;
 mod utils;
@@ -32,8 +33,11 @@ async fn main() -> Result<()> {
     let mut hup = signal(SignalKind::hangup())?;
     let mut term = signal(SignalKind::terminate())?;
 
+    let plugins = plugins::Plugins::load();
+    let router = plugins.patch_router(api::make_router());
+
     tokio::select! {
-        _ = axum::serve(listener, api::make_router()) => {},
+        _ = axum::serve(listener, router) => {},
         _ = int.recv() => {},
         _ = hup.recv() => {},
         _ = term.recv() => {},

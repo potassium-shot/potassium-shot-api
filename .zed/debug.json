@@ -1,0 +1,33 @@
+// Project-local debug tasks
+//
+// For more documentation on how to configure debug tasks,
+// see: https://zed.dev/docs/debugger
+[
+  {
+    "adapter": "CodeLLDB",
+    "label": "cargo run",
+    "build": {
+      "label": "cargo run",
+      "command": "cargo",
+      "args": ["run"],
+      "env": {
+        "RUSTC_TOOLCHAIN": "/home/potassium-shot/.rustup/toolchains/stable-x86_64-unknown-linux-gnu",
+        "POTASSIUM_SHOT_API_DB_PATH": "server/test-db.sqlite",
+        "POTASSIUM_SHOT_API_PLUGINS_PATH": "server/test-plugins",
+      },
+      "cwd": "/home/potassium-shot/code/rust/potassium-shot-api",
+      "use_new_terminal": false,
+      "allow_concurrent_runs": false,
+      "reveal": "always",
+      "reveal_target": "dock",
+      "hide": "never",
+      "tags": [],
+      "shell": "system",
+      "show_summary": false,
+      "show_command": false,
+      "save": "none",
+      "hooks": [],
+    },
+    "sourceLanguages": ["rust"],
+  },
+]

@@ -1,9 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["server", "client", "common"]
+members = ["server", "client", "common", "plugin"]
 
 [workspace.dependencies]
 argon2 = { version = "0.5.3", features = ["std", "zeroize"] }
+axum = "0.8.9"
 base64 = "0.22.1"
 deref-derive = "0.1.0"
 serde = { version = "1.0.228", features = ["derive"] }
