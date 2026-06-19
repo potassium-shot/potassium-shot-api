@@ -20,7 +20,7 @@ const EXTENSION: &str = "dylib";
 #[derive(Default)]
 pub struct Plugins {
     router: Router,
-    libs: Vec<libloading::Library>,
+    libs: Vec<(String, libloading::Library)>,
 }
 
 impl Plugins {
@@ -44,6 +44,14 @@ impl Plugins {
 
             let path = entry.path();
 
+            let name = path
+                .file_stem()
+                .map(|s| s.to_string_lossy())
+                .unwrap_or_default();
+
+            #[cfg(target_family = "unix")]
+            let name = name.trim_start_matches("lib").to_string();
+
             if path.extension() == Some(OsStr::new(EXTENSION)) {
                 let maybe_lib = unsafe { libloading::Library::new(path.as_path()) };
 
@@ -62,7 +70,8 @@ impl Plugins {
 
                 let Ok(register_function) = maybe_register_function else {
                     tracing::error!(
-                        "Could not find function `register_api(ApiRegister) -> BuiltApiRegister`. Make sure it is marked with #[unsafe(no_mangle)]"
+                        "Could not find function `register_api(ApiRegister) -> BuiltApiRegister` in plugin `{}`. Make sure it is marked with #[unsafe(no_mangle)].",
+                        name
                     );
                     continue;
                 };
@@ -70,13 +79,8 @@ impl Plugins {
                 let register = ApiRegister::default();
                 let built_register = register_function(register);
                 router = router.merge(built_register.into_router());
-                libs.push(lib);
-                tracing::info!(
-                    "Loaded plugin '{}'",
-                    path.file_stem()
-                        .map(|s| s.to_string_lossy())
-                        .unwrap_or_default()
-                );
+                libs.push((name.clone().to_string(), lib));
+                tracing::info!("Loaded plugin '{}'.", name);
             }
         }
 
@@ -85,5 +89,21 @@ impl Plugins {
 
     pub fn patch_router(&self, router: Router) -> Router {
         router.merge(self.router.clone())
+    }
+
+    pub fn init_all(&self) {
+        for (name, lib) in &self.libs {
+            let maybe_init_fn = unsafe { lib.get::<fn()>(b"init") };
+
+            let Ok(init_fn) = maybe_init_fn else {
+                tracing::error!(
+                    "Could not find function `init()` in plugin `{}`. Make sure it is marked with #[unsafe(no_mangle)].",
+                    name
+                );
+                continue;
+            };
+
+            init_fn();
+        }
     }
 }

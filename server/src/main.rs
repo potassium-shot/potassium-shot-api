@@ -36,6 +36,8 @@ async fn main() -> Result<()> {
     let plugins = plugins::Plugins::load();
     let router = plugins.patch_router(api::make_router());
 
+    plugins.init_all();
+
     tokio::select! {
         _ = axum::serve(listener, router) => {},
         _ = int.recv() => {},
