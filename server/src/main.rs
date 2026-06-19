@@ -38,6 +38,8 @@ async fn main() -> Result<()> {
 
     plugins.init_all();
 
+    tracing::info!("Axum server started.");
+
     tokio::select! {
         _ = axum::serve(listener, router) => {},
         _ = int.recv() => {},
