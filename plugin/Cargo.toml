@@ -1,6 +1,6 @@
 [package]
 name = "potassium-shot-plugin"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [features]
@@ -11,3 +11,6 @@ server-impl = []
 anyhow = "1.0.102"
 axum.workspace = true
 serde.workspace = true
+
+[dependencies.potassium-shot-common]
+path = "../common"

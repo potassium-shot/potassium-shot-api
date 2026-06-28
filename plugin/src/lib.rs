@@ -2,6 +2,8 @@ use axum::{Json, Router, routing::post};
 
 pub use crate::axum_error::AxumResult;
 
+pub use potassium_shot_common::types::{LoginToken, UserId};
+
 mod axum_error;
 
 pub struct ApiRegister {

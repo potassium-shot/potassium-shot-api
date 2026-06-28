@@ -19,7 +19,9 @@ static DB: OnceLock<Db> = OnceLock::new();
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
-    let db = Db::new().await?;
+    let plugins = plugins::Plugins::load();
+
+    let db = Db::new(plugins.clone()).await?;
     DB.get_or_init(|| db);
 
     let addr = format!(
@@ -33,7 +35,6 @@ async fn main() -> Result<()> {
     let mut hup = signal(SignalKind::hangup())?;
     let mut term = signal(SignalKind::terminate())?;
 
-    let plugins = plugins::Plugins::load();
     let router = plugins.patch_router(api::make_router());
 
     plugins.init_all();

@@ -1,15 +1,16 @@
 use chrono::{DateTime, Utc};
 use tracing::info;
 
-use crate::prelude::*;
+use crate::{plugins::Plugins, prelude::*};
 
 #[derive(Clone)]
 pub struct Db {
     conn: sqlx::SqlitePool,
+    plugins: Plugins,
 }
 
 impl Db {
-    pub async fn new() -> Result<Self> {
+    pub async fn new(plugins: Plugins) -> Result<Self> {
         let path = crate::env::DB_PATH.get();
         std::fs::create_dir_all(
             std::path::PathBuf::from(path.as_ref())
@@ -19,7 +20,7 @@ impl Db {
         let conn = sqlx::SqlitePool::connect(&format!("sqlite:{}?mode=rwc", path)).await?;
         sqlx::migrate!().run(&conn).await?;
         info!("Database loaded.");
-        Ok(Self { conn })
+        Ok(Self { conn, plugins })
     }
 
     pub async fn add_user(&self, name: &str, password_hash: &str) -> Result<UserId> {
@@ -104,6 +105,8 @@ impl Db {
         .await?;
 
         info!("User '{}' (id: {}) removed.", username, userid);
+
+        self.plugins.user_deleted(userid);
 
         Ok(())
     }

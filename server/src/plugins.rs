@@ -1,7 +1,44 @@
-use std::ffi::OsStr;
+use std::{ffi::OsStr, sync::Arc};
 
 use axum::Router;
-use potassium_shot_plugin::ApiRegister;
+use potassium_shot_plugin::{ApiRegister, UserId};
+
+macro_rules! call_fn_impl {
+    ($name: ident $($arg_name: ident : $arg_type: ident),*) => {
+        fn $name<$($arg_type),*>(&self, fn_name: &str, $($arg_name: $arg_type),*)
+        where $(
+            $arg_type: Clone
+        ),*
+        {
+            for (name, lib) in &self.libs {
+                let maybe_fn = unsafe { lib.get::<fn($($arg_type),*)>(fn_name) };
+
+                let mut fn_decl = fn_name.to_string();
+                fn_decl.push('(');
+
+                $(
+                    fn_decl.push_str(std::any::type_name::<$arg_type>());
+                    fn_decl.push_str(", ");
+                )*
+
+                fn_decl.pop();
+                fn_decl.pop();
+                fn_decl.push(')');
+
+                let Ok(r#fn) = maybe_fn else {
+                    tracing::error!(
+                        "Could not find function `{}` in plugin `{}`. Make sure it is marked with #[unsafe(no_mangle)].",
+                        fn_decl,
+                        name
+                    );
+                    continue;
+                };
+
+                catch_unwind_and_log(name, fn_decl.as_str(), std::panic::AssertUnwindSafe(|| r#fn($($arg_name.clone()),*)));
+            }
+        }
+    };
+}
 
 #[cfg(any(
     target_os = "linux",
@@ -17,10 +54,10 @@ const EXTENSION: &str = "dll";
 #[cfg(target_os = "macos")]
 const EXTENSION: &str = "dylib";
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Plugins {
     router: Router,
-    libs: Vec<(String, libloading::Library)>,
+    libs: Vec<(String, Arc<libloading::Library>)>,
 }
 
 impl Plugins {
@@ -77,9 +114,18 @@ impl Plugins {
                 };
 
                 let register = ApiRegister::default();
-                let built_register = register_function(register);
+                let maybe_built_register = catch_unwind_and_log(
+                    name.as_str(),
+                    "register_api(ApiRegister) -> BuiltApiRegister",
+                    std::panic::AssertUnwindSafe(|| register_function(register)),
+                );
+
+                let Some(built_register) = maybe_built_register else {
+                    continue;
+                };
+
                 router = router.merge(built_register.into_router());
-                libs.push((name.clone().to_string(), lib));
+                libs.push((name.clone().to_string(), Arc::new(lib)));
                 tracing::info!("Loaded plugin '{}'.", name);
             }
         }
@@ -92,18 +138,41 @@ impl Plugins {
     }
 
     pub fn init_all(&self) {
-        for (name, lib) in &self.libs {
-            let maybe_init_fn = unsafe { lib.get::<fn()>(b"init") };
+        self.call_func("init");
+    }
 
-            let Ok(init_fn) = maybe_init_fn else {
-                tracing::error!(
-                    "Could not find function `init()` in plugin `{}`. Make sure it is marked with #[unsafe(no_mangle)].",
-                    name
-                );
-                continue;
+    pub fn user_deleted(&self, id: UserId) {
+        self.call_func_1("user_deleted", id);
+    }
+
+    call_fn_impl!(call_func);
+    call_fn_impl!(call_func_1 arg1: Arg1);
+}
+
+fn catch_unwind_and_log<R>(
+    plugin_name: &str,
+    function_name: &str,
+    f: impl FnOnce() -> R + std::panic::UnwindSafe,
+) -> Option<R> {
+    match std::panic::catch_unwind(f) {
+        Ok(v) => Some(v),
+        Err(payload) => {
+            let msg = if let Some(s) = payload.downcast_ref::<&'static str>() {
+                *s
+            } else if let Some(s) = payload.downcast_ref::<String>() {
+                s.as_str()
+            } else {
+                "<non-printable panic payload>"
             };
 
-            init_fn();
+            tracing::error!(
+                "Plugin `{}` panicked in function `{}`:\n{}",
+                plugin_name,
+                function_name,
+                msg
+            );
+
+            None
         }
     }
 }
